@@ -15,6 +15,9 @@ const path = require('path');
   page.on('requestfailed', r => errors.push(`REQUEST ${r.url()} ${r.failure()?.errorText || 'failed'}`));
   const target = process.argv[2] || 'http://127.0.0.1:8899';
   const expectAudio = process.argv.includes('--audio');
+  const expectHammer = process.argv.includes('--hammer');
+  const expectSaw = process.argv.includes('--saw');
+  let contactBaseline = { hammerContacts: 0, sawContacts: 0 };
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 });
   if (expectAudio) {
     await page.waitForFunction(() => window.__AV_READY === true && document.querySelector('#audioStart') && !document.querySelector('#audioStart').disabled, { timeout: 30000 });
@@ -25,6 +28,7 @@ const path = require('path');
       console.error(JSON.stringify({ errors, diagnostics: await page.evaluate(() => ({ ready: window.__AV_READY, frame: window.__AV_FRAME, audio: window.__AUDIO_STATUS, status: window.__AV_STATUS, button: document.querySelector('#audioStart')?.textContent })) }, null, 2));
       throw error;
     }
+
   }
   await page.waitForFunction(() => window.__AV_READY === true && window.__AV_FRAME > 45, { timeout: 10000 });
   if (target.includes(':8899')) {
@@ -35,9 +39,14 @@ const path = require('path');
     await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.demo === true, { timeout: 10000 });
   }
   const status = await page.evaluate(() => ({ frame: window.__AV_FRAME, status: window.__AV_STATUS, audio: window.__AUDIO_STATUS || null, canvas: { width: document.querySelector('canvas').width, height: document.querySelector('canvas').height } }));
-  if (expectAudio) await page.waitForFunction(() => window.__AV_STATUS && (window.__AV_STATUS.butcherAttack > 0.95 || window.__AV_STATUS.ripperAttack > 0.95), { timeout: 5000 });
+  if (expectHammer || expectSaw) contactBaseline = await page.evaluate(() => ({ hammerContacts: window.__AV_STATUS?.hammerContacts || 0, sawContacts: window.__AV_STATUS?.sawContacts || 0 }));
+  if (expectHammer) await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.hammerContacts > base, { timeout: 8000 }, contactBaseline.hammerContacts);
+  else if (expectSaw) await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.sawContacts > base, { timeout: 8000 }, contactBaseline.sawContacts);
+  else if (expectAudio) await page.waitForFunction(() => window.__AV_STATUS && (window.__AV_STATUS.butcherAttack > 0.95 || window.__AV_STATUS.ripperAttack > 0.95), { timeout: 5000 });
   const impactStatus = await page.evaluate(() => window.__AV_STATUS);
-  const screenshot = path.join(__dirname, 'foundry-live-preview.png');
+  if (expectHammer && (impactStatus.hammerDistance > 0.75 || impactStatus.ripperDamage < 0.8)) errors.push(`HAMMER CONTACT distance=${impactStatus.hammerDistance} recoil=${impactStatus.ripperDamage}`);
+  if (expectSaw && (impactStatus.sawDistance > 0.75 || impactStatus.butcherDamage < 0.8)) errors.push(`SAW CONTACT distance=${impactStatus.sawDistance} recoil=${impactStatus.butcherDamage}`);
+  const screenshot = path.join(__dirname, expectHammer ? 'battle-hammer-impact.png' : expectSaw ? 'battle-saw-impact.png' : 'foundry-live-preview.png');
   await page.screenshot({ path: screenshot });
   console.log(JSON.stringify({ ok: errors.length === 0, errors, screenshot, impactStatus, ...status }, null, 2));
   await browser.close();
