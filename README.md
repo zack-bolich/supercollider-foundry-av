@@ -4,7 +4,7 @@ A local live audiovisual system with a public autonomous visual edition.
 
 **Public:** https://zack-bolich.github.io/supercollider-foundry-av/
 
-GitHub Pages is static, so the public URL runs the visual state machine in clearly labelled autonomous demo mode. The actual SuperCollider audio and localhost OSC relay remain local. A temporary secure WebSocket tunnel can drive the public page live by opening it with `?ws=wss://YOUR-RELAY`, but the normal local launcher is the zero-configuration full AV edition.
+GitHub Pages is static, so the public URL includes a self-contained Web Audio edition: click **START AUDIO** to run the 164 BPM industrial drum/bass/metal arrangement and robotic German voice directly in the browser. The original SuperCollider engine and localhost OSC relay remain the higher-fidelity local edition. A temporary secure WebSocket tunnel can drive the public visuals from SuperCollider by opening the page with `?ws=wss://YOUR-RELAY`.
 
 ```text
 SuperCollider audio + semantic events

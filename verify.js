@@ -13,14 +13,21 @@ const path = require('path');
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   const target = process.argv[2] || 'http://127.0.0.1:8899';
+  const expectAudio = process.argv.includes('--audio');
   await page.goto(target, { waitUntil: 'networkidle0' });
+  if (expectAudio) {
+    await page.click('#audioStart');
+    await page.waitForFunction(() => window.__AUDIO_STATUS && window.__AUDIO_STATUS.running && window.__AUDIO_STATUS.scheduled > 40 && window.__AUDIO_STATUS.voiceLoaded && window.__AUDIO_STATUS.voicePlays > 0, { timeout: 20000 });
+  }
   await page.waitForFunction(() => window.__AV_READY === true && window.__AV_FRAME > 45, { timeout: 10000 });
   if (target.includes(':8899')) {
     await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.connected && window.__AV_STATUS.received > 0, { timeout: 10000 });
+  } else if (expectAudio) {
+    await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.audio === true, { timeout: 10000 });
   } else {
     await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.demo === true, { timeout: 10000 });
   }
-  const status = await page.evaluate(() => ({ frame: window.__AV_FRAME, status: window.__AV_STATUS, canvas: { width: document.querySelector('canvas').width, height: document.querySelector('canvas').height } }));
+  const status = await page.evaluate(() => ({ frame: window.__AV_FRAME, status: window.__AV_STATUS, audio: window.__AUDIO_STATUS || null, canvas: { width: document.querySelector('canvas').width, height: document.querySelector('canvas').height } }));
   const screenshot = path.join(__dirname, 'foundry-live-preview.png');
   await page.screenshot({ path: screenshot });
   console.log(JSON.stringify({ ok: errors.length === 0, errors, screenshot, ...status }, null, 2));
