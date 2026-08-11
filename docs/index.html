@@ -1,193 +1,91 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>FOUNDRY // SIGNAL ORGANISM</title>
-<meta name="description" content="An original industrial signal organism: a generative p5.js visual system driven locally by SuperCollider OSC or publicly in autonomous demo mode.">
-<meta property="og:title" content="Foundry Signal Organism">
-<meta property="og:description" content="A live industrial p5.js signal organism driven by SuperCollider OSC.">
-<meta property="og:type" content="website">
-<meta property="og:image" content="https://zack-bolich.github.io/supercollider-foundry-av/assets/foundry-live-preview.png">
-<meta property="og:url" content="https://zack-bolich.github.io/supercollider-foundry-av/">
-<meta name="twitter:card" content="summary_large_image">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>INFERNAL FOUNDRY // MACHINE WAR</title>
+<meta name="description" content="An original live audiovisual battle between two infernal scrapyard robots, rendered in Three.js from Blender-built assets.">
+<meta property="og:title" content="Infernal Foundry Machine War"><meta property="og:description" content="SuperCollider and browser audio drive an articulated 3D scrapyard robot battle.">
+<meta property="og:image" content="https://zack-bolich.github.io/supercollider-foundry-av/assets/foundry-live-preview.png"><meta property="og:url" content="https://zack-bolich.github.io/supercollider-foundry-av/"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:,">
-<script src="./p5.min.js"></script>
 <style>
-  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050607;color:#d7e0d8;font-family:Consolas,"Courier New",monospace}
-  canvas{display:block}
-  #boot{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;letter-spacing:.22em;font-size:12px;color:#d6ff45;background:#050607;transition:opacity .6s}
-  #audioStart{position:fixed;z-index:20;left:50%;top:78%;transform:translate(-50%,-50%);padding:14px 22px;border:1px solid #d6ff45;background:rgba(5,6,7,.9);color:#d6ff45;font:700 12px Consolas,monospace;letter-spacing:.18em;cursor:pointer;box-shadow:0 0 24px rgba(214,255,69,.14)}
-  #audioStart:hover{background:#d6ff45;color:#050607}
-  #audioStart:disabled{opacity:.6;cursor:wait}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080604;color:#e6ddd2;font-family:Consolas,"Courier New",monospace}canvas{display:block}
+#boot{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#080604;color:#ff5b21;letter-spacing:.23em;font-size:12px;transition:opacity .5s}
+#audioStart{position:fixed;z-index:25;left:50%;top:82%;transform:translate(-50%,-50%);padding:15px 24px;border:1px solid #ff5b21;background:rgba(8,6,4,.92);color:#ff8a39;font:700 12px Consolas,monospace;letter-spacing:.18em;cursor:pointer;box-shadow:0 0 35px #ff3c171f}#audioStart:hover{background:#ff5b21;color:#080604}#audioStart:disabled{opacity:.55}
+#hud{position:fixed;z-index:10;left:18px;top:18px;width:330px;padding:14px;border:1px solid #9e321f;background:#070503d9;pointer-events:none}#signal{font-size:11px;font-weight:bold;color:#ff5b21}#title{font-size:23px;font-weight:bold;margin:7px 0 5px}.minor{font-size:10px;color:#9b9189;line-height:1.55}.meter{height:3px;background:#24110a;margin-top:8px}.meter i{display:block;height:100%;width:0;background:#ff5b21;box-shadow:0 0 8px #ff5b21}
+#fighters{position:fixed;z-index:10;left:50%;bottom:22px;transform:translateX(-50%);font-size:10px;letter-spacing:.15em;color:#bdb1a5;text-align:center;pointer-events:none}.nameA{color:#ff5b21}.nameB{color:#50d8dd}#voice{position:fixed;z-index:10;left:50%;top:18%;transform:translateX(-50%);color:#65e8ec;font-size:12px;letter-spacing:.16em;opacity:0;pointer-events:none}
 </style>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
 </head>
-<body><div id="boot">INITIALIZING FOUNDRY LINK</div><button id="audioStart" type="button">START AUDIO</button>
-<script>
-p5.disableFriendlyErrors = true;
-const PALETTE={void:'#050607',iron:'#19201d',bone:'#d7e0d8',acid:'#d6ff45',ember:'#ff5a24',cold:'#36d7ff',bruise:'#8c42ff'};
-const LOCAL_PAGE=['127.0.0.1','localhost'].includes(location.hostname);
-const STATIC_MODE=new URLSearchParams(location.search).has('static');
-const EXPLICIT_WS=new URLSearchParams(location.search).get('ws');
-const state={section:(LOCAL_PAGE&&!STATIC_MODE)?'FOUNDRY':'PUBLIC DEMO',sectionIndex:0,beat:0,connected:false,oscLive:false,lastOsc:0,received:0,demo:!LOCAL_PAGE||STATIC_MODE,audio:false,hud:true,kick:0,snare:0,hat:0,note:0,voice:0,shake:0,flash:0,pitch:48};
-let sparks=[], shards=[], trails, seed=47011, socket, reconnectTimer, demoStep=0, demoLast=0;
+<body><div id="boot">ASSEMBLING INFERNAL MACHINES</div><button id="audioStart">START MACHINE WAR</button><div id="hud"><div id="signal">● INITIALIZING</div><div id="title">INFERNAL FOUNDRY</div><div class="minor" id="status">BLENDER ASSETS // THREE.JS COMBAT RUNTIME</div><div class="meter"><i id="intensity"></i></div></div><div id="voice">MASCHINENSTIMME // KRIEGSBEFEHL</div><div id="fighters"><span class="nameA">THE BUTCHER // HYDRAULIC HAMMER</span> &nbsp; VS &nbsp; <span class="nameB">THE RIPPER // ROTARY SAW</span><br>F FULLSCREEN &nbsp; H HUD &nbsp; D DEMO</div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/GLTFLoader.js';
+
+const LOCAL=['127.0.0.1','localhost'].includes(location.hostname),PARAMS=new URLSearchParams(location.search),STATIC=PARAMS.has('static'),EXPLICIT_WS=PARAMS.get('ws');
+const state={section:(LOCAL&&!STATIC)?'FOUNDRY':'PUBLIC WAR',sectionIndex:0,beat:0,connected:false,oscLive:false,lastOsc:0,received:0,demo:!LOCAL||STATIC,audio:false,kick:0,snare:0,hat:0,note:0,voice:0,shake:0,flash:0,pitch:40,butcherAttack:0,ripperAttack:0,butcherDamage:0,ripperDamage:0,modelsLoaded:0,impacts:0,hud:true};
+const sections=['FOUNDRY','HUNT','MELEE','OVERLOAD'];
+let scene,camera,renderer,clock,loader,butcher,ripper,arenaGear,impactLight,hammerArm,sawArm,hammerHead,sawDisc,flywheels=[],socket,reconnectTimer,demoStep=0,demoLast=0,attackA=-10,attackB=-10,lastImpactA=false,lastImpactB=false,particles,particleData=[],smoke,smokeData=[];
 let audioCtx,audioMaster,audioTimer,nextNoteTime=0,audioStep=0,noiseBuffer,voiceBuffer,audioScheduled=0,voicePlays=0;
-const sectionNames=['FOUNDRY','CRUCIBLE','OVERLOAD','BLACKOUT'];
+const $=id=>document.getElementById(id),clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),lerp=(a,b,t)=>a+(b-a)*t,smooth=t=>t*t*(3-2*t);
 
-function setup(){
-  pixelDensity(1); createCanvas(windowWidth,windowHeight); frameRate(60);
-  colorMode(HSB,360,100,100,100); randomSeed(seed); noiseSeed(seed);
-  trails=createGraphics(width,height); trails.pixelDensity(1); trails.colorMode(HSB,360,100,100,100); trails.clear();
-  for(let i=0;i<80;i++) sparks.push(new Spark(random(width),random(height),random(-.3,.3),random(-.2,.2),random(20,180),false));
-  connect(); document.getElementById('audioStart').addEventListener('click',initAudio); document.getElementById('boot').style.opacity='0'; setTimeout(()=>document.getElementById('boot').remove(),700);
-  window.__AV_READY=true;
+init();
+async function init(){
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x080604);scene.fog=new THREE.FogExp2(0x100905,.055);
+  camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,80);camera.position.set(0,4.5,10.8);camera.lookAt(0,1.8,0);
+  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.25;document.body.prepend(renderer.domElement);
+  clock=new THREE.Clock();loader=new GLTFLoader();buildArena();buildParticles();
+  const results=await Promise.allSettled([loadRobot('./assets/robot-butcher.glb','butcher'),loadRobot('./assets/robot-ripper.glb','ripper')]);
+  if(results.some(r=>r.status==='rejected'))console.error('Robot asset load failed',results);
+  connect();$('audioStart').addEventListener('click',initAudio);addEventListener('resize',resize);addEventListener('keydown',keys);
+  $('boot').style.opacity='0';setTimeout(()=>$('boot')?.remove(),550);window.__AV_READY=true;animate();
 }
+function buildArena(){
+  const floorMat=new THREE.MeshStandardMaterial({color:0x15110e,metalness:.82,roughness:.68});const floor=new THREE.Mesh(new THREE.PlaneGeometry(32,25,20,20),floorMat);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+  const grid=new THREE.GridHelper(30,30,0x8f2f18,0x2a1710);grid.position.y=.012;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x21130d,metalness:.75,roughness:.7});
+  for(let i=-6;i<=6;i++){const post=new THREE.Mesh(new THREE.BoxGeometry(.18,7,.24),wallMat);post.position.set(i*1.9,3.1,-4.5);post.rotation.z=i%2?.08:-.08;scene.add(post)}
+  for(let y=0;y<4;y++){const beam=new THREE.Mesh(new THREE.BoxGeometry(25,.15,.22),wallMat);beam.position.set(0,1+y*1.7,-4.4);scene.add(beam)}
+  arenaGear=makeGear(1.3,18,0x54200f);arenaGear.position.set(0,4.7,-4.0);arenaGear.rotation.x=Math.PI/2;scene.add(arenaGear);
+  for(const x of [-5.6,5.6]){const tank=new THREE.Mesh(new THREE.CylinderGeometry(.72,.85,3.6,12),new THREE.MeshStandardMaterial({color:0x271710,metalness:.9,roughness:.46}));tank.position.set(x,1.8,-2.9);tank.castShadow=true;scene.add(tank);for(let j=0;j<3;j++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.78,.06,6,16),wallMat);ring.position.set(x,.7+j*1.1,-2.9);ring.rotation.x=Math.PI/2;scene.add(ring)}}
+  const hemi=new THREE.HemisphereLight(0x6a4534,0x090604,1.45);scene.add(hemi);const key=new THREE.DirectionalLight(0xffa56f,4.8);key.position.set(-5,8,6);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-9;key.shadow.camera.right=9;key.shadow.camera.top=8;key.shadow.camera.bottom=-3;scene.add(key);
+  const furnace=new THREE.PointLight(0xff3a0a,35,13,1.7);furnace.position.set(0,.6,-2.5);scene.add(furnace);const cold=new THREE.PointLight(0x35bfc9,18,10,2);cold.position.set(4,3,2);scene.add(cold);impactLight=new THREE.PointLight(0xffd27a,0,8,1.3);impactLight.position.set(0,1.7,1);scene.add(impactLight);
+  for(let i=0;i<9;i++){const tooth=new THREE.Mesh(new THREE.ConeGeometry(.12,.7,4),wallMat);tooth.position.set(-7+i*1.7,.35,-1.9-Math.sin(i)*.5);tooth.rotation.z=Math.PI;scene.add(tooth)}
+}
+function makeGear(r,teeth,color){const g=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color,metalness:.92,roughness:.35,emissive:0x190400});const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.22,8,teeth*2),mat);g.add(ring);for(let i=0;i<teeth;i++){const t=new THREE.Mesh(new THREE.BoxGeometry(.25,.42,.28),mat);const a=i*Math.PI*2/teeth;t.position.set(Math.cos(a)*r,Math.sin(a)*r,0);t.rotation.z=a;g.add(t)}for(let i=0;i<8;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(r*1.45,.11,.13),mat);s.rotation.z=i*Math.PI/4;g.add(s)}return g}
+async function loadRobot(url,kind){const gltf=await loader.loadAsync(url),root=gltf.scene;root.scale.setScalar(.92);root.position.set(kind==='butcher'?-2.25:2.25,0,0);root.rotation.y=kind==='butcher'?.22:-.22;root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});scene.add(root);state.modelsLoaded++;
+  if(kind==='butcher'){butcher=root;hammerArm=root.getObjectByName('Butcher_RArmPivot');hammerHead=root.getObjectByName('Butcher_HammerHead');flywheels.push(root.getObjectByName('Butcher_Flywheel'));}
+  else{ripper=root;sawArm=root.getObjectByName('Ripper_LArmPivot');sawDisc=root.getObjectByName('Ripper_Saw');flywheels.push(root.getObjectByName('Ripper_Flywheel'));}
+}
+function buildParticles(){const n=700,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),col=new Float32Array(n*3);for(let i=0;i<n;i++){particleData.push({life:0,v:new THREE.Vector3()});pos[i*3+1]=-99;col.set([1,.2,.02],i*3)}geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('color',new THREE.BufferAttribute(col,3));particles=new THREE.Points(geo,new THREE.PointsMaterial({size:.13,vertexColors:true,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(particles);
+ const sn=120,sg=new THREE.BufferGeometry(),sp=new Float32Array(sn*3);for(let i=0;i<sn;i++){smokeData.push({x:(Math.random()-.5)*14,y:Math.random()*6,z:-2-Math.random()*3,s:.2+Math.random()*.5});sp.set([smokeData[i].x,smokeData[i].y,smokeData[i].z],i*3)}sg.setAttribute('position',new THREE.BufferAttribute(sp,3));smoke=new THREE.Points(sg,new THREE.PointsMaterial({color:0x6f5040,size:.48,transparent:true,opacity:.16,depthWrite:false}));scene.add(smoke)}
+function burst(x,y,z,count=45,cold=false){const pos=particles.geometry.attributes.position.array,col=particles.geometry.attributes.color.array;let made=0;for(let i=0;i<particleData.length&&made<count;i++)if(particleData[i].life<=0){const p=particleData[i];p.life=.45+Math.random()*.75;p.v.set((Math.random()-.5)*5,1.5+Math.random()*5,(Math.random()-.5)*3);pos.set([x,y,z],i*3);col.set(cold?[.1,.8,1]:[1,.18+Math.random()*.35,.01],i*3);made++}particles.geometry.attributes.position.needsUpdate=true;particles.geometry.attributes.color.needsUpdate=true}
+function updateParticles(dt){const pos=particles.geometry.attributes.position.array;for(let i=0;i<particleData.length;i++){const p=particleData[i];if(p.life>0){p.life-=dt;p.v.y-=8*dt;pos[i*3]+=p.v.x*dt;pos[i*3+1]+=p.v.y*dt;pos[i*3+2]+=p.v.z*dt;if(pos[i*3+1]<.03){pos[i*3+1]=.03;p.v.y*=-.25}}else pos[i*3+1]=-99}particles.geometry.attributes.position.needsUpdate=true;const sp=smoke.geometry.attributes.position.array;for(let i=0;i<smokeData.length;i++){let p=smokeData[i];p.y+=p.s*dt;p.x+=Math.sin(performance.now()*.0003+i)*dt*.08;if(p.y>7){p.y=0;p.x=(Math.random()-.5)*14}sp.set([p.x,p.y,p.z],i*3)}smoke.geometry.attributes.position.needsUpdate=true}
 
-async function initAudio(){
-  const btn=document.getElementById('audioStart');btn.disabled=true;btn.textContent='ARMING AUDIO';
-  try{
-    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-    const comp=audioCtx.createDynamicsCompressor();comp.threshold.value=-16;comp.knee.value=12;comp.ratio.value=7;comp.attack.value=.004;comp.release.value=.18;
-    audioMaster=audioCtx.createGain();audioMaster.gain.value=.56;audioMaster.connect(comp).connect(audioCtx.destination);
-    noiseBuffer=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate);const d=noiseBuffer.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;
-    await audioCtx.resume();
-    playKick(audioCtx.currentTime+.02,.9);
-    try{const raw=await fetch('./assets/german-machine-voice.mp3').then(r=>r.arrayBuffer());voiceBuffer=await audioCtx.decodeAudioData(raw)}catch(_){voiceBuffer=null}
-    state.audio=true;state.demo=false;state.section='FOUNDRY';nextNoteTime=audioCtx.currentTime+.08;audioStep=0;scheduleAudio();audioTimer=setInterval(scheduleAudio,25);
-    btn.remove();window.__AUDIO_STATUS={running:audioCtx.state==='running',scheduled:audioScheduled,voiceLoaded:!!voiceBuffer,contextTime:audioCtx.currentTime};
-  }catch(error){btn.disabled=false;btn.textContent='RETRY AUDIO';console.error(error)}
+function attackEnvelope(start,now){const t=(now-start)/760;if(t<0||t>1)return{v:0,impact:false};let v;if(t<.18)v=-.18*smooth(t/.18);else if(t<.48)v=lerp(-.18,1,smooth((t-.18)/.30));else if(t<.59)v=1;else v=lerp(1,0,smooth((t-.59)/.41));return{v,impact:t>=.48&&t<.59}}
+function updateBattle(dt,now){const a=attackEnvelope(attackA,now),b=attackEnvelope(attackB,now);state.butcherAttack=a.v;state.ripperAttack=b.v;
+  if(hammerArm)hammerArm.rotation.z=lerp(.78,-.30,clamp(a.v));if(sawArm)sawArm.rotation.z=lerp(-.72,.26,clamp(b.v));if(sawDisc)sawDisc.rotation.y-=dt*(8+state.hat*45);for(const w of flywheels)if(w)w.rotation.z+=dt*(1.5+state.note*5);if(arenaGear)arenaGear.rotation.z+=dt*(.35+state.sectionIndex*.25);
+  if(butcher){butcher.position.x=-2.25+clamp(a.v)*.72;butcher.rotation.z=Math.sin(now*.0015)*.008-state.butcherDamage*.045}if(ripper){ripper.position.x=2.25-clamp(b.v)*.72;ripper.rotation.z=-Math.sin(now*.0017)*.008+state.ripperDamage*.045}
+  if(a.impact&&!lastImpactA){state.impacts++;state.ripperDamage=1;state.shake+=.24;state.flash=.7;impactLight.intensity=75;burst(.35,1.55,.25,110,false)}if(b.impact&&!lastImpactB){state.impacts++;state.butcherDamage=1;state.shake+=.18;state.flash=.55;impactLight.intensity=65;burst(-.35,1.5,.25,100,true)}lastImpactA=a.impact;lastImpactB=b.impact;state.butcherDamage*=.94;state.ripperDamage*=.94;
 }
-function audioEnv(g,t,peak,attack,decay){g.gain.cancelScheduledValues(t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+attack);g.gain.exponentialRampToValueAtTime(.0001,t+attack+decay)}
-function playKick(t,v){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.setValueAtTime(132,t);o.frequency.exponentialRampToValueAtTime(41,t+.13);audioEnv(g,t,.72*v,.002,.31);o.connect(g).connect(audioMaster);o.start(t);o.stop(t+.36);audioScheduled++}
-function noiseHit(t,v,hat=false){const src=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();src.buffer=noiseBuffer;f.type=hat?'highpass':'bandpass';f.frequency.value=hat?6900:1850;f.Q.value=hat?.7:.9;audioEnv(g,t,(hat?.10:.31)*v,.001,hat?.045:.17);src.connect(f).connect(g).connect(audioMaster);src.start(t);src.stop(t+(hat?.08:.24));audioScheduled++}
-function playBass(t,midi,v){const f=440*Math.pow(2,(midi-69)/12),o1=audioCtx.createOscillator(),o2=audioCtx.createOscillator(),filter=audioCtx.createBiquadFilter(),g=audioCtx.createGain();o1.type='sawtooth';o2.type='square';o1.frequency.value=f;o2.frequency.value=f/2;filter.type='lowpass';filter.Q.value=8;filter.frequency.setValueAtTime(320,t);filter.frequency.exponentialRampToValueAtTime(1100+state.sectionIndex*90,t+.025);filter.frequency.exponentialRampToValueAtTime(190,t+.18);audioEnv(g,t,.17*v,.003,.19);o1.connect(filter);o2.connect(filter);filter.connect(g).connect(audioMaster);o1.start(t);o2.start(t);o1.stop(t+.23);o2.stop(t+.23);audioScheduled++}
-function playMetal(t,v){const g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();f.type='bandpass';f.frequency.value=1400+Math.random()*2400;f.Q.value=3;audioEnv(g,t,.08*v,.001,.22);[217,307,593].forEach((hz,i)=>{const o=audioCtx.createOscillator();o.type=i===1?'square':'sine';o.frequency.value=hz*(.9+Math.random()*.2);o.connect(f);o.start(t);o.stop(t+.27)});f.connect(g).connect(audioMaster);audioScheduled++}
-function playRobotVoice(t){if(!voiceBuffer)return;const src=audioCtx.createBufferSource(),speech=audioCtx.createBiquadFilter(),carrier=audioCtx.createOscillator(),ring=audioCtx.createGain(),tone=audioCtx.createBiquadFilter(),dry=audioCtx.createGain();src.buffer=voiceBuffer;speech.type='bandpass';speech.frequency.value=1250;speech.Q.value=.55;carrier.type='sawtooth';carrier.frequency.value=[72,86,96][state.sectionIndex%3];ring.gain.value=0;tone.type='lowpass';tone.frequency.value=4200;dry.gain.value=.055;src.connect(speech);speech.connect(ring.gain);carrier.connect(ring).connect(tone).connect(audioMaster);speech.connect(dry).connect(audioMaster);src.start(t);carrier.start(t);src.onended=()=>{try{carrier.stop()}catch(_){}};audioScheduled++;voicePlays++;setTimeout(()=>hit('voice',1),Math.max(0,(t-audioCtx.currentTime)*1000))}
+function hit(kind,v=.8){v=clamp(v,0,1.5);const now=performance.now();if(kind==='kick'){state.kick=Math.max(state.kick,v);attackA=now;state.shake+=.05*v}else if(kind==='snare'){state.snare=Math.max(state.snare,v);attackB=now}else if(kind==='voice'){state.voice=1;state.flash=.35}else state.hat=Math.max(state.hat,v)}
+function setSection(name,index=0){state.section=String(name).toUpperCase();state.sectionIndex=Number(index)||0;state.flash=.7;if(state.section.includes('OVERLOAD')){attackA=performance.now();setTimeout(()=>attackB=performance.now(),180)}}
+function animate(){requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.04),now=performance.now();if(now-state.lastOsc>1800)state.oscLive=false;if(state.demo&&!state.audio)runDemo(now);updateBattle(dt,now);updateParticles(dt);state.kick*=.84;state.snare*=.79;state.hat*=.7;state.note*=.93;state.voice*=.965;state.flash*=.84;state.shake*=.82;if(impactLight)impactLight.intensity*=.80;
+  const shake=state.shake;camera.position.x=(Math.random()-.5)*shake;camera.position.y=4.5+(Math.random()-.5)*shake;camera.position.z=10.8+(Math.random()-.5)*shake;camera.lookAt(0,1.8,0);renderer.toneMappingExposure=1.42+state.flash*.7;renderer.render(scene,camera);updateHUD();window.__AV_FRAME=(window.__AV_FRAME||0)+1;window.__AV_STATUS={...state,attackAActive:now-attackA<760,attackBActive:now-attackB<760};}
+function updateHUD(){const live=state.connected&&state.oscLive,signal=live?'OSC LIVE':state.audio?'BROWSER AUDIO':LOCAL&&!STATIC?'OSC WAITING':'PUBLIC AUTONOMOUS';$('signal').textContent=`● ${signal} // ${state.section}`;$('signal').style.color=live?'#d6ff45':'#ff5b21';$('status').textContent=`BLENDER ROBOTS ${state.modelsLoaded}/2  //  IMPACTS ${String(state.impacts).padStart(4,'0')}  //  BEAT ${String(state.beat).padStart(2,'0')}  //  EVENTS ${String(state.received).padStart(6,'0')}`;$('intensity').style.width=`${clamp((state.kick+state.snare+state.note)*40,3,100)}%`;$('voice').style.opacity=state.voice;}
+function runDemo(now){if(now-demoLast>92){demoLast=now;demoStep++;if(demoStep%8===0)hit('kick',.86);if(demoStep%8===4)hit('snare',.84);if(demoStep%3===0)state.note=.55;if(demoStep%64===0)setSection(sections[(demoStep/64)%4|0],demoStep/64|0)}}
+function connect(){clearTimeout(reconnectTimer);const target=EXPLICIT_WS||((LOCAL&&!STATIC)?`ws://${location.host}`:null);if(!target)return;socket=new WebSocket(target);socket.onopen=()=>state.connected=true;socket.onclose=()=>{state.connected=false;state.oscLive=false;reconnectTimer=setTimeout(connect,1000)};socket.onerror=()=>socket.close();socket.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='osc')handleOSC(m);else if(m.type==='relay')state.received=m.received||0}catch(_){}}}
+function handleOSC(m){state.oscLive=true;state.lastOsc=performance.now();state.received=m.received||state.received+1;const a=m.args||[];if(m.address==='/av/section')setSection(a[0],a[1]);if(m.address==='/av/beat')state.beat=Number(a[0]||0);if(m.address==='/av/hit')hit(String(a[0]||'hat'),Number(a[1]||.5));if(m.address==='/av/note'){state.pitch=Number(a[0]||40);state.note=Math.max(state.note,Number(a[1]||.5))}if(m.address==='/av/stop')state.section='HALTED'}
+function keys(e){if(e.key.toLowerCase()==='f')document.documentElement.requestFullscreen?.();if(e.key.toLowerCase()==='h'){$('hud').hidden=!$('hud').hidden;$('fighters').hidden=!$('fighters').hidden}if(e.key.toLowerCase()==='d')state.demo=!state.demo}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+
+async function initAudio(){const btn=$('audioStart');btn.disabled=true;btn.textContent='ARMING MACHINE WAR';try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();const comp=audioCtx.createDynamicsCompressor();comp.threshold.value=-16;comp.knee.value=12;comp.ratio.value=7;comp.attack.value=.004;comp.release.value=.18;audioMaster=audioCtx.createGain();audioMaster.gain.value=.56;audioMaster.connect(comp).connect(audioCtx.destination);noiseBuffer=audioCtx.createBuffer(1,audioCtx.sampleRate*2,audioCtx.sampleRate);const d=noiseBuffer.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;await audioCtx.resume();playKick(audioCtx.currentTime+.02,.9);try{const raw=await fetch('./assets/german-machine-voice.mp3').then(r=>r.arrayBuffer());voiceBuffer=await audioCtx.decodeAudioData(raw)}catch(_){voiceBuffer=null}state.audio=true;state.demo=false;state.section='FOUNDRY';nextNoteTime=audioCtx.currentTime+.08;audioStep=0;scheduleAudio();audioTimer=setInterval(scheduleAudio,25);btn.remove()}catch(error){btn.disabled=false;btn.textContent='RETRY AUDIO';console.error(error)}}
+function env(g,t,peak,a,d){g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+a);g.gain.exponentialRampToValueAtTime(.0001,t+a+d)}
+function playKick(t,v){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.setValueAtTime(132,t);o.frequency.exponentialRampToValueAtTime(41,t+.13);env(g,t,.72*v,.002,.31);o.connect(g).connect(audioMaster);o.start(t);o.stop(t+.36);audioScheduled++}
+function noiseHit(t,v,hat=false){const s=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();s.buffer=noiseBuffer;f.type=hat?'highpass':'bandpass';f.frequency.value=hat?6900:1850;f.Q.value=.8;env(g,t,(hat?.10:.31)*v,.001,hat?.045:.17);s.connect(f).connect(g).connect(audioMaster);s.start(t);s.stop(t+(hat?.08:.24));audioScheduled++}
+function playBass(t,midi,v){const hz=440*2**((midi-69)/12),o=audioCtx.createOscillator(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();o.type='sawtooth';o.frequency.value=hz;f.type='lowpass';f.Q.value=9;f.frequency.setValueAtTime(1050,t);f.frequency.exponentialRampToValueAtTime(170,t+.19);env(g,t,.2*v,.003,.2);o.connect(f).connect(g).connect(audioMaster);o.start(t);o.stop(t+.24);audioScheduled++}
+function playMetal(t,v){const g=audioCtx.createGain(),f=audioCtx.createBiquadFilter();f.type='bandpass';f.frequency.value=1600+Math.random()*2200;f.Q.value=3;env(g,t,.09*v,.001,.24);[217,307,593].forEach((hz,i)=>{const o=audioCtx.createOscillator();o.type=i===1?'square':'sine';o.frequency.value=hz*(.9+Math.random()*.2);o.connect(f);o.start(t);o.stop(t+.28)});f.connect(g).connect(audioMaster);audioScheduled++}
+function playVoice(t){if(!voiceBuffer)return;const src=audioCtx.createBufferSource(),filter=audioCtx.createBiquadFilter(),g=audioCtx.createGain();src.buffer=voiceBuffer;filter.type='bandpass';filter.frequency.value=1050;filter.Q.value=.7;g.gain.value=.16;src.connect(filter).connect(g).connect(audioMaster);src.start(t);audioScheduled++;voicePlays++;visualAt(t,()=>hit('voice',1))}
 function visualAt(t,fn){setTimeout(fn,Math.max(0,(t-audioCtx.currentTime)*1000))}
-function scheduleStep(step,t){
-  const kick=[.82,.64,.76,.66,.85,.61,.78,0][Math.floor(step/2)%8],bass=[40,40,39,40,43,40,41,39,40,45,43,40,39,41,40,null][step%16];
-  if(step%2===0&&kick>0){playKick(t,kick);visualAt(t,()=>hit('kick',kick))}
-  if(step%8===4){noiseHit(t,.9,false);visualAt(t,()=>hit('snare',.82))}
-  noiseHit(t,[.08,.15,.11,.23][step%4],true);visualAt(t,()=>hit('hat',[.08,.15,.11,.23][step%4]));
-  if(bass!==null){playBass(t,bass,.9);visualAt(t,()=>{state.pitch=bass;state.note=.58;spawnNote(bass,.58)})}
-  if(step%16===11&&Math.random()>.35)playMetal(t,.8);
-  if(step%64===0)visualAt(t,()=>setSection(sectionNames[Math.floor(step/64)%4],Math.floor(step/64)));
-  if(step%256===32)playRobotVoice(t);
-  visualAt(t,()=>{state.beat=step%16;state.flash=Math.max(state.flash,.12)});
-}
-function scheduleAudio(){if(!audioCtx||audioCtx.state!=='running')return;const sixteenth=60/164/4;while(nextNoteTime<audioCtx.currentTime+.12){scheduleStep(audioStep,nextNoteTime);nextNoteTime+=sixteenth;audioStep++}window.__AUDIO_STATUS={running:true,scheduled:audioScheduled,step:audioStep,voiceLoaded:!!voiceBuffer,voicePlays,contextTime:audioCtx.currentTime}}
-
-function connect(){
-  clearTimeout(reconnectTimer);
-  const target=EXPLICIT_WS||((LOCAL_PAGE&&!STATIC_MODE)?`ws://${location.host}`:null);
-  if(!target)return;
-  socket=new WebSocket(target);
-  socket.onopen=()=>{state.connected=true};
-  socket.onclose=()=>{state.connected=false;state.oscLive=false;reconnectTimer=setTimeout(connect,1000)};
-  socket.onerror=()=>socket.close();
-  socket.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='osc')handleOSC(m);if(m.type==='relay'&&m.status==='connected')state.received=m.received||0}catch(_){}};
-}
-
-function handleOSC(m){
-  state.oscLive=true;state.lastOsc=performance.now();state.received=m.received||state.received+1;
-  const a=m.args||[];
-  if(m.address==='/av/section') setSection(String(a[0]||'FOUNDRY'),Number(a[1]||0));
-  if(m.address==='/av/beat'){state.beat=Number(a[0]||0);state.flash=Math.max(state.flash,.15+Number(a[1]||0)*.18)}
-  if(m.address==='/av/hit') hit(String(a[0]||'hat'),Number(a[1]||.5));
-  if(m.address==='/av/note'){state.pitch=Number(a[0]||48);state.note=Math.max(state.note,Number(a[1]||.5));spawnNote(state.pitch,state.note)}
-  if(m.address==='/av/stop'){state.oscLive=false;state.section='HALTED'}
-}
-function setSection(name,index){state.section=String(name).toUpperCase();state.sectionIndex=Number(index)||0;state.flash=.7;for(let i=0;i<34;i++)spawnShard(width/2,height/2,random(TWO_PI),random(3,13))}
-function hit(kind,v){v=Math.max(0,Math.min(1.5,v));const contactY=height*.594,offset=Math.min(width,height)*.04;if(kind==='kick'){state.kick=Math.max(state.kick,v);state.shake+=9*v;for(let i=0;i<18*v;i++)spawnSpark(width*.5-offset,contactY,true)}else if(kind==='snare'){state.snare=Math.max(state.snare,v);state.flash=Math.max(state.flash,.5*v);for(let i=0;i<22*v;i++)spawnShard(width*.5+offset,contactY,random(TWO_PI),random(4,15))}else if(kind==='voice'){state.voice=1;state.flash=.35}else{state.hat=Math.max(state.hat,v);for(let i=0;i<5*v;i++)spawnSpark(random(width),height*.18,true)}}
-function spawnNote(note,v){const y=map(note,30,90,height*.82,height*.14,true);for(let i=0;i<10+v*15;i++)sparks.push(new Spark(width*.5+random(-width*.12,width*.12),y,random(-3,3),random(-2,2),random(45,110),true))}
-function spawnSpark(x,y,burst=false){sparks.push(new Spark(x,y,burst?random(-5,5):random(-.3,.3),burst?random(-7,-1):random(-.2,.2),random(35,130),burst))}
-function spawnShard(x,y,a,s){shards.push({x,y,vx:cos(a)*s,vy:sin(a)*s,life:1,spin:random(-.25,.25),r:random(3,16)})}
-
-function draw(){
-  if(performance.now()-state.lastOsc>1800)state.oscLive=false;
-  if(state.demo&&!state.audio)runDemo();
-  decayState();
-  const sx=random(-state.shake,state.shake),sy=random(-state.shake,state.shake);
-  push();translate(sx,sy);renderBackdrop();renderArchitecture();renderTrails();renderCore();renderParticles();renderGlitches();pop();
-  if(state.hud)renderHUD();
-  window.__AV_FRAME=frameCount;window.__AV_STATUS={...state,sparks:sparks.length,shards:shards.length};
-}
-function decayState(){state.kick*=.84;state.snare*=.79;state.hat*=.68;state.note*=.92;state.voice*=.965;state.shake*=.72;state.flash*=.78}
-
-function renderBackdrop(){
-  noStroke();
-  for(let y=0;y<height;y+=8){const t=y/height;fill(160+15*t,18,4+7*t);rect(-20,y,width+40,9)}
-  blendMode(ADD);for(let i=0;i<7;i++){const y=height*(.12+i*.13)+sin(frameCount*.006+i)*18;fill(i%2?82:20,85,8,10);rect(0,y,width,1+state.hat*2)}blendMode(BLEND);
-  stroke(80,18,24,20);strokeWeight(1);for(let x=0;x<width;x+=32)line(x,0,x,height);for(let y=0;y<height;y+=32)line(0,y,width,y);
-}
-function renderArchitecture(){
-  const cx=width/2,hz=height*.58;stroke(75,28,55,52);strokeWeight(1.2);noFill();
-  for(let i=0;i<18;i++){const t=i/17,yy=lerp(hz,height*1.08,t*t);line(cx-width*(.08+t*.68),yy,cx+width*(.08+t*.68),yy)}
-  for(let i=-8;i<=8;i++){const bx=cx+i*width*.075;line(cx+i*11,hz,bx,height)}
-  noStroke();fill(20,70,24,45+state.kick*35);quad(0,height*.75,width*.31,hz,width*.39,hz,0,height);fill(190,60,22,35+state.snare*40);quad(width,height*.75,width*.69,hz,width*.61,hz,width,height);
-  stroke(15,82,83,45);strokeWeight(2);for(let i=0;i<6;i++){const x=width*(.08+i*.17);line(x,height*.12,x,height*.32+sin(frameCount*.01+i)*28);line(x-13,height*.32,x+13,height*.32)}
-}
-function renderTrails(){
-  trails.noStroke();trails.fill(160,30,2.2,12);trails.rect(0,0,width,height);
-  trails.blendMode(ADD);trails.strokeWeight(1);
-  for(let p of sparks){if(p.life>.2){trails.stroke(p.hue,85,85,p.life*18);trails.line(p.x,p.y,p.x-p.vx*3,p.y-p.vy*3)}}
-  trails.blendMode(BLEND);image(trails,0,0);
-}
-function renderCore(){
-  const cx=width/2,b=Math.min(width,height)*.105,gearY=height*.31,anvilY=height*.62,anvilTop=anvilY-b*.25;
-  drawGear(cx,gearY,b);
-  const leftImpact=constrain(pow(state.kick,0.42)*1.18,0,1),rightImpact=constrain(pow(state.snare,0.42)*1.22,0,1);
-  drawSwingHammer(width*.23,height*.27,cx-b*.38,anvilTop,1,leftImpact,b);
-  drawSwingHammer(width*.77,height*.27,cx+b*.38,anvilTop,-1,rightImpact,b);
-  drawAnvil(cx,anvilY,b*1.08);
-  if(leftImpact>.68||rightImpact>.68){const tx=leftImpact>rightImpact?cx-b*.38:cx+b*.38;blendMode(ADD);noStroke();fill(18,95,100,55);circle(tx,anvilTop,b*.28);blendMode(BLEND)}
-  if(state.voice>.02){noFill();stroke(190,85,95,state.voice*70);strokeWeight(2);for(let i=0;i<4;i++){const rr=b*(1.65+i*.18);arc(cx,gearY,rr*2,rr*2,-1.05,1.05)}}
-  noStroke();fill(82,65,88,76);textAlign(CENTER);textSize(10);text('FORGE DRIVE // IMPACT PRESS',cx,anvilY+b*.92);textAlign(LEFT);
-}
-function drawGear(x,y,b){
-  push();translate(x,y);rotate(frameCount*.009*(state.section==='OVERLOAD'?2.5:1));stroke(82,78,92,80);strokeWeight(2.5);fill(155,18,18,96);
-  beginShape();const teeth=18;for(let i=0;i<teeth*4;i++){const a=TWO_PI*i/(teeth*4),phase=i%4,r=b*(phase===1||phase===2?1.18:1);vertex(cos(a)*r,sin(a)*r)}endShape(CLOSE);
-  fill(160,12,6,100);stroke(15,65,75,72);circle(0,0,b*1.42);stroke(82,80,92,72);strokeWeight(b*.10);for(let i=0;i<8;i++){const a=TWO_PI*i/8;line(cos(a)*b*.28,sin(a)*b*.28,cos(a)*b*.68,sin(a)*b*.68)}
-  noStroke();fill(0,0,3,100);circle(0,0,b*.48);fill(82,88,95,65+state.kick*30);circle(0,0,b*.22);pop();
-}
-function drawSwingHammer(px,py,tx,ty,side,impact,b){
-  const strike=atan2(ty-py,tx-px),rest=strike-side*.75,ease=impact*impact*(3-2*impact),a=lerp(rest,strike,ease),len=dist(px,py,tx,ty);
-  push();translate(px,py);noStroke();fill(155,18,22,100);circle(0,0,b*.28);fill(82,72,78,75);circle(0,0,b*.11);rotate(a);
-  stroke(28,66,42,95);strokeWeight(2);fill(28,48,27,100);rect(0,-b*.05,len-b*.10,b*.10,4);
-  translate(len,0);noStroke();fill(155,12,34,100);rect(-b*.22,-b*.43,b*.44,b*.86,5);fill(15,78,78,72);rect(-b*.30,-b*.34,b*.12,b*.68,2);fill(15,55,58,60);rect(b*.18,-b*.31,b*.10,b*.62,2);pop();
-}
-function drawAnvil(x,y,b){
-  push();translate(x,y);stroke(155,20,52,90);strokeWeight(2);fill(158,18,16,100);
-  beginShape();vertex(-b*.95,-b*.25);vertex(b*.78,-b*.25);vertex(b*1.08,-b*.08);vertex(b*.62,b*.03);vertex(b*.34,b*.28);vertex(b*.27,b*.62);vertex(b*.58,b*.78);vertex(-b*.58,b*.78);vertex(-b*.28,b*.62);vertex(-b*.34,b*.27);vertex(-b*.62,b*.02);endShape(CLOSE);
-  fill(15,78,75,55+state.kick*35);noStroke();rect(-b*.78,-b*.25,b*1.55,b*.07);pop();
-}
-function renderParticles(){
-  blendMode(ADD);noStroke();
-  for(let i=sparks.length-1;i>=0;i--){const p=sparks[i];p.update();p.draw();if(p.life<=0)sparks.splice(i,1)}
-  blendMode(BLEND);fill(15,90,90);noStroke();
-  for(let i=shards.length-1;i>=0;i--){const q=shards[i];q.x+=q.vx;q.y+=q.vy;q.vx*=.98;q.vy=q.vy*.98+.08;q.life-=.018;push();translate(q.x,q.y);rotate(frameCount*q.spin);fill(15+state.sectionIndex*35,90,95,q.life*80);rect(-q.r/2,-1,q.r,2);pop();if(q.life<=0)shards.splice(i,1)}
-  if(sparks.length>900)sparks.splice(0,sparks.length-900);
-}
-function renderGlitches(){
-  if(state.snare>.12||state.section==='OVERLOAD'){noStroke();const n=2+floor(state.snare*10);for(let i=0;i<n;i++){const y=random(height),h=random(1,8),off=random(-40,40)*state.snare;fill(random()<.5?82:190,90,90,8+state.snare*18);rect(off,y,width,h)}}
-  noStroke();fill(0,0,100,state.flash*7);rect(0,0,width,height);
-  stroke(0,0,100,4);for(let y=0;y<height;y+=4)line(0,y,width,y);
-}
-function renderHUD(){
-  const live=state.connected&&state.oscLive, signal=live?'OSC LIVE':(state.audio?'BROWSER AUDIO':((LOCAL_PAGE&&!STATIC_MODE)?'OSC WAITING':'PUBLIC AUTONOMOUS'));noStroke();fill(0,0,2,72);rect(18,18,292,102);stroke(live?82:15,88,90,70);noFill();rect(18.5,18.5,292,102);noStroke();
-  fill(live?82:15,85,95);textSize(11);textStyle(BOLD);text(`● ${signal}  //  ${state.demo?'DEMO':'REAL SIGNAL'}`,32,43);
-  fill(0,0,88);textSize(22);text(state.section,31,72);textStyle(NORMAL);fill(160,15,65);textSize(10);text(`PORT 57220   EVENTS ${nf(state.received,6)}   BEAT ${nf(state.beat,2)}`,32,97);
-  textAlign(RIGHT);fill(0,0,70);text('FOUNDRY SIGNAL ORGANISM  /  F FULLSCREEN  H HUD  D DEMO',width-24,height-22);textAlign(LEFT);
-  if(state.voice>.03){fill(190,70,95,state.voice*75);textAlign(CENTER);textSize(12);text('MASCHINENSTIMME // KANAL OFFEN',width/2,height*.82);textAlign(LEFT)}
-}
-function runDemo(){if(millis()-demoLast>91){demoLast=millis();demoStep++;if(demoStep%2===0)hit('kick',.75);if(demoStep%8===4)hit('snare',.8);hit('hat',random(.08,.35));if(demoStep%3===0){state.note=.5;spawnNote(40+(demoStep%18),.5)}if(demoStep%64===0)setSection(sectionNames[(demoStep/64)%4|0],demoStep/64|0)}}
-
-class Spark{
-  constructor(x,y,vx,vy,life,burst){this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.max=life;this.life=life/120;this.hue=random()<.72?random(65,92):random(10,25);this.size=burst?random(1,3.8):random(.5,1.8)}
-  update(){const a=noise(this.x*.003,this.y*.003,frameCount*.004)*TWO_PI*2;this.vx+=cos(a)*.018;this.vy+=sin(a)*.018;this.x+=this.vx;this.y+=this.vy;this.vx*=.992;this.vy*=.992;this.life-=.006;if(this.x<0)this.x=width;if(this.x>width)this.x=0;if(this.y<0)this.y=height;if(this.y>height)this.y=0}
-  draw(){fill(this.hue,88,96,Math.max(0,this.life)*85);circle(this.x,this.y,this.size*(1+state.hat*1.7))}
-}
-function keyPressed(){if(key==='f'||key==='F')fullscreen(!fullscreen());if(key==='s'||key==='S')saveCanvas('foundry-signal-organism','png');if(key==='d'||key==='D')state.demo=!state.demo;if(key==='h'||key==='H')state.hud=!state.hud}
-function mousePressed(){for(let i=0;i<34;i++)spawnShard(mouseX,mouseY,random(TWO_PI),random(2,12));state.snare=.8}
-function windowResized(){resizeCanvas(windowWidth,windowHeight);trails=createGraphics(width,height);trails.pixelDensity(1);trails.colorMode(HSB,360,100,100,100);trails.clear()}
+function stepAudio(step,t){const kick=[.86,.66,.78,.64,.9,.62,.8,0][Math.floor(step/2)%8],bass=[40,40,39,40,43,40,41,39,40,45,43,40,39,41,40,null][step%16];if(step%2===0&&kick){playKick(t,kick);visualAt(t,()=>hit('kick',kick))}if(step%8===4){noiseHit(t,.9);visualAt(t,()=>hit('snare',.86))}noiseHit(t,[.08,.15,.11,.23][step%4],true);if(bass!==null){playBass(t,bass,.9);visualAt(t,()=>{state.pitch=bass;state.note=.58})}if(step%16===11)playMetal(t,.8);if(step%64===0)visualAt(t,()=>setSection(sections[Math.floor(step/64)%4],Math.floor(step/64)));if(step%256===32)playVoice(t);visualAt(t,()=>state.beat=step%16)}
+function scheduleAudio(){if(!audioCtx||audioCtx.state!=='running')return;const sixteenth=60/164/4;while(nextNoteTime<audioCtx.currentTime+.12){stepAudio(audioStep,nextNoteTime);nextNoteTime+=sixteenth;audioStep++}window.__AUDIO_STATUS={running:true,scheduled:audioScheduled,step:audioStep,voiceLoaded:!!voiceBuffer,voicePlays,contextTime:audioCtx.currentTime}}
 </script></body></html>

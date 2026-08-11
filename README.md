@@ -1,35 +1,62 @@
-# Foundry Signal Organism
+# Infernal Foundry // Machine War
 
-A local live audiovisual system with a public autonomous visual edition.
+An original live audiovisual battle between two infernal scrapyard robots. The characters are procedurally modeled and exported from Blender, rendered and articulated in Three.js, and driven by SuperCollider OSC or the public browser-audio arrangement.
 
 **Public:** https://zack-bolich.github.io/supercollider-foundry-av/
 
-GitHub Pages is static, so the public URL includes a self-contained Web Audio edition: click **START AUDIO** to run the 164 BPM industrial drum/bass/metal arrangement and robotic German voice directly in the browser. The original SuperCollider engine and localhost OSC relay remain the higher-fidelity local edition. A temporary secure WebSocket tunnel can drive the public visuals from SuperCollider by opening the page with `?ws=wss://YOUR-RELAY`.
+Click **START MACHINE WAR** on the public page to run the 164 BPM industrial drum/bass/metal arrangement and robotic German voice. Browser autoplay policy requires that initial gesture.
+
+## Architecture
 
 ```text
 SuperCollider audio + semantic events
   -> OSC UDP 127.0.0.1:57220
   -> Node relay
   -> WebSocket 127.0.0.1:8899
-  -> p5.js visual state machine
+  -> Three.js combat runtime
+       |- Blender-exported Butcher robot (hydraulic hammer)
+       |- Blender-exported Ripper robot (rotary saw)
+       |- attack state machines, recoil, damage and lunges
+       `- sparks, smoke, impact lights and camera shake
 ```
 
-## Run
+The static GitHub Pages edition uses the same Three.js combat renderer with a self-contained Web Audio score. A secure relay can drive it remotely with `?ws=wss://YOUR-RELAY`.
+
+## Run locally
 
 Double-click `RUN-FULL-AV.cmd`. It starts or reuses the relay, restarts the port-safe SuperCollider performance, and opens the visualizer.
 
 Manual components remain available as `RUN-FOUNDRY-AV.cmd` and the SuperCollider launcher.
 
-The arrangement includes an original German machine-voice passage processed through a 16-band SuperCollider vocoder:
+## Battle mapping
+
+- Kick: the Butcher winds up, lunges, and swings its hammer.
+- Snare: the Ripper drives its spinning saw into the melee.
+- Hi-hat: rotary machinery and high-speed mechanisms.
+- Bass notes: flywheel torque and furnace intensity.
+- Section changes: combat phases, including synchronized overload attacks.
+- Impact: opponent recoil, damage tilt, sparks, flash, point light, and camera shake.
+- Voice: cyan battlefield command transmission.
+
+## Blender assets
+
+`blender/build_scrapyard_robots.py` builds both original articulated robot assets and exports:
+
+- `assets/robot-butcher.glb`
+- `assets/robot-ripper.glb`
+
+Blender is not required to view or run the project. It is only required to regenerate the assets.
+
+## Voice
+
+The arrangement includes an original German machine-voice passage:
 
 > Wir sind der Rhythmus der Maschinen. Stahl und Strom. Schatten werden zu Signalen. Kein Schlaf. Nur Bewegung. Die Zukunft beginnt jetzt.
 
 ## Controls
 
 - `F`: fullscreen
-- `S`: save PNG
-- `D`: toggle visual demo events (clearly labelled)
+- `D`: toggle autonomous battle events
 - `H`: toggle HUD
-- Click: inject a local visual rupture
 
 The relay accepts only `/av/section`, `/av/beat`, `/av/hit`, `/av/note`, and `/av/stop`, and binds to localhost only.

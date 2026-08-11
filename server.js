@@ -11,7 +11,6 @@ const ALLOWED = new Set(['/av/section', '/av/beat', '/av/hit', '/av/note', '/av/
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'p5', 'lib')));
 app.get('/health', (_req, res) => res.json({ ok: true, oscPort: OSC_PORT, clients: wss.clients.size, received }));
 
 const server = http.createServer(app);
@@ -69,7 +68,7 @@ udp.bind(OSC_PORT, HOST, () => console.log(`[OSC] udp://${HOST}:${OSC_PORT}`));
 
 server.listen(HTTP_PORT, HOST, () => {
   console.log(`[WEB] http://${HOST}:${HTTP_PORT}`);
-  console.log('[READY] SuperCollider → OSC → WebSocket → p5.js');
+  console.log('[READY] SuperCollider → OSC → WebSocket → Three.js machine war');
 });
 
 function shutdown() {
