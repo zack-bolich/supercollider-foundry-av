@@ -48,7 +48,7 @@ function handleOSC(m){
   if(m.address==='/av/stop'){state.oscLive=false;state.section='HALTED'}
 }
 function setSection(name,index){state.section=String(name).toUpperCase();state.sectionIndex=Number(index)||0;state.flash=.7;for(let i=0;i<34;i++)spawnShard(width/2,height/2,random(TWO_PI),random(3,13))}
-function hit(kind,v){v=Math.max(0,Math.min(1.5,v));if(kind==='kick'){state.kick=Math.max(state.kick,v);state.shake+=9*v;for(let i=0;i<18*v;i++)spawnSpark(width/2,height*.72,true)}else if(kind==='snare'){state.snare=Math.max(state.snare,v);state.flash=Math.max(state.flash,.5*v);for(let i=0;i<22*v;i++)spawnShard(width*.5,height*.46,random(TWO_PI),random(4,15))}else if(kind==='voice'){state.voice=1;state.flash=.35}else{state.hat=Math.max(state.hat,v);for(let i=0;i<5*v;i++)spawnSpark(random(width),height*.18,true)}}
+function hit(kind,v){v=Math.max(0,Math.min(1.5,v));const contactY=height*.594,offset=Math.min(width,height)*.04;if(kind==='kick'){state.kick=Math.max(state.kick,v);state.shake+=9*v;for(let i=0;i<18*v;i++)spawnSpark(width*.5-offset,contactY,true)}else if(kind==='snare'){state.snare=Math.max(state.snare,v);state.flash=Math.max(state.flash,.5*v);for(let i=0;i<22*v;i++)spawnShard(width*.5+offset,contactY,random(TWO_PI),random(4,15))}else if(kind==='voice'){state.voice=1;state.flash=.35}else{state.hat=Math.max(state.hat,v);for(let i=0;i<5*v;i++)spawnSpark(random(width),height*.18,true)}}
 function spawnNote(note,v){const y=map(note,30,90,height*.82,height*.14,true);for(let i=0;i<10+v*15;i++)sparks.push(new Spark(width*.5+random(-width*.12,width*.12),y,random(-3,3),random(-2,2),random(45,110),true))}
 function spawnSpark(x,y,burst=false){sparks.push(new Spark(x,y,burst?random(-5,5):random(-.3,.3),burst?random(-7,-1):random(-.2,.2),random(35,130),burst))}
 function spawnShard(x,y,a,s){shards.push({x,y,vx:cos(a)*s,vy:sin(a)*s,life:1,spin:random(-.25,.25),r:random(3,16)})}
@@ -84,28 +84,27 @@ function renderTrails(){
   trails.blendMode(BLEND);image(trails,0,0);
 }
 function renderCore(){
-  const cx=width/2,cy=height*.40,base=Math.min(width,height)*(.125+state.kick*.012);
-  drawAnvil(cx,cy+base*1.30,base);
-  push();translate(cx,cy);rotate(frameCount*.008*(state.section==='OVERLOAD'?2.4:1));
-  stroke(82,78,92,78);strokeWeight(2.5);fill(155,18,18,96);
-  beginShape();const teeth=18;
-  for(let i=0;i<teeth*4;i++){const a=TWO_PI*i/(teeth*4),phase=i%4,r=base*(phase===1||phase===2?1.18:1.0);vertex(cos(a)*r,sin(a)*r)}
-  endShape(CLOSE);
-  fill(160,12,6,100);stroke(15,65,75,72);circle(0,0,base*1.42);
-  stroke(82,80,92,72);strokeWeight(base*.10);for(let i=0;i<8;i++){const a=TWO_PI*i/8;line(cos(a)*base*.28,sin(a)*base*.28,cos(a)*base*.68,sin(a)*base*.68)}
-  noStroke();fill(0,0,3,100);circle(0,0,base*.48);fill(82,88,95,65+state.kick*30);circle(0,0,base*.22);
-  pop();
-  drawHammer(cx-base*1.95,cy-base*.72,1,state.kick,base);
-  drawHammer(cx+base*1.95,cy-base*.72,-1,state.snare,base);
-  noFill();stroke(15,88,95,45+state.snare*40);strokeWeight(2);arc(cx,cy,base*3.15,base*3.15,PI+.22,TWO_PI-.22);
-  if(state.voice>.02){stroke(190,85,95,state.voice*70);for(let i=0;i<4;i++){const rr=base*(1.75+i*.17);arc(cx,cy,rr*2,rr*2,-1.05,1.05)}}
-  noStroke();fill(82,65,88,70);textAlign(CENTER);textSize(10);text('FORGE DRIVE // HAMMER ARRAY',cx,cy+base*2.18);textAlign(LEFT);
+  const cx=width/2,b=Math.min(width,height)*.105,gearY=height*.31,anvilY=height*.62,anvilTop=anvilY-b*.25;
+  drawGear(cx,gearY,b);
+  const leftImpact=constrain(pow(state.kick,0.42)*1.18,0,1),rightImpact=constrain(pow(state.snare,0.42)*1.22,0,1);
+  drawSwingHammer(width*.23,height*.27,cx-b*.38,anvilTop,1,leftImpact,b);
+  drawSwingHammer(width*.77,height*.27,cx+b*.38,anvilTop,-1,rightImpact,b);
+  drawAnvil(cx,anvilY,b*1.08);
+  if(leftImpact>.68||rightImpact>.68){const tx=leftImpact>rightImpact?cx-b*.38:cx+b*.38;blendMode(ADD);noStroke();fill(18,95,100,55);circle(tx,anvilTop,b*.28);blendMode(BLEND)}
+  if(state.voice>.02){noFill();stroke(190,85,95,state.voice*70);strokeWeight(2);for(let i=0;i<4;i++){const rr=b*(1.65+i*.18);arc(cx,gearY,rr*2,rr*2,-1.05,1.05)}}
+  noStroke();fill(82,65,88,76);textAlign(CENTER);textSize(10);text('FORGE DRIVE // IMPACT PRESS',cx,anvilY+b*.92);textAlign(LEFT);
 }
-function drawHammer(x,y,side,impact,b){
-  push();translate(x,y);scale(side,1);rotate(.34+impact*.46);const len=b*1.55;
-  noStroke();fill(155,16,28,100);rect(-b*.30,-b*.25,b*.72,b*.50,4);fill(15,70,70,65);rect(-b*.23,-b*.18,b*.58,b*.09,2);
-  stroke(25,65,45,90);strokeWeight(2);fill(28,48,27,100);rect(b*.18,-b*.055,len,b*.11,3);
-  pop();
+function drawGear(x,y,b){
+  push();translate(x,y);rotate(frameCount*.009*(state.section==='OVERLOAD'?2.5:1));stroke(82,78,92,80);strokeWeight(2.5);fill(155,18,18,96);
+  beginShape();const teeth=18;for(let i=0;i<teeth*4;i++){const a=TWO_PI*i/(teeth*4),phase=i%4,r=b*(phase===1||phase===2?1.18:1);vertex(cos(a)*r,sin(a)*r)}endShape(CLOSE);
+  fill(160,12,6,100);stroke(15,65,75,72);circle(0,0,b*1.42);stroke(82,80,92,72);strokeWeight(b*.10);for(let i=0;i<8;i++){const a=TWO_PI*i/8;line(cos(a)*b*.28,sin(a)*b*.28,cos(a)*b*.68,sin(a)*b*.68)}
+  noStroke();fill(0,0,3,100);circle(0,0,b*.48);fill(82,88,95,65+state.kick*30);circle(0,0,b*.22);pop();
+}
+function drawSwingHammer(px,py,tx,ty,side,impact,b){
+  const strike=atan2(ty-py,tx-px),rest=strike-side*.75,ease=impact*impact*(3-2*impact),a=lerp(rest,strike,ease),len=dist(px,py,tx,ty);
+  push();translate(px,py);noStroke();fill(155,18,22,100);circle(0,0,b*.28);fill(82,72,78,75);circle(0,0,b*.11);rotate(a);
+  stroke(28,66,42,95);strokeWeight(2);fill(28,48,27,100);rect(0,-b*.05,len-b*.10,b*.10,4);
+  translate(len,0);noStroke();fill(155,12,34,100);rect(-b*.22,-b*.43,b*.44,b*.86,5);fill(15,78,78,72);rect(-b*.30,-b*.34,b*.12,b*.68,2);fill(15,55,58,60);rect(b*.18,-b*.31,b*.10,b*.62,2);pop();
 }
 function drawAnvil(x,y,b){
   push();translate(x,y);stroke(155,20,52,90);strokeWeight(2);fill(158,18,16,100);

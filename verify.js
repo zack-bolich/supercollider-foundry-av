@@ -28,9 +28,11 @@ const path = require('path');
     await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.demo === true, { timeout: 10000 });
   }
   const status = await page.evaluate(() => ({ frame: window.__AV_FRAME, status: window.__AV_STATUS, audio: window.__AUDIO_STATUS || null, canvas: { width: document.querySelector('canvas').width, height: document.querySelector('canvas').height } }));
+  if (expectAudio) await page.waitForFunction(() => window.__AV_STATUS && (window.__AV_STATUS.kick > 0.65 || window.__AV_STATUS.snare > 0.65), { timeout: 5000 });
+  const impactStatus = await page.evaluate(() => window.__AV_STATUS);
   const screenshot = path.join(__dirname, 'foundry-live-preview.png');
   await page.screenshot({ path: screenshot });
-  console.log(JSON.stringify({ ok: errors.length === 0, errors, screenshot, ...status }, null, 2));
+  console.log(JSON.stringify({ ok: errors.length === 0, errors, screenshot, impactStatus, ...status }, null, 2));
   await browser.close();
   process.exit(errors.length ? 1 : 0);
 })().catch(error => { console.error(error); process.exit(1); });
