@@ -16,7 +16,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080604;col
 </style>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/"}}</script>
 </head>
-<body><div id="boot">ASSEMBLING INFERNAL MACHINES</div><button id="audioStart">START MACHINE WAR</button><div id="hud"><div id="signal">● INITIALIZING</div><div id="title">INFERNAL FOUNDRY</div><div class="minor" id="status">BLENDER ASSETS // THREE.JS COMBAT RUNTIME</div><div class="meter"><i id="intensity"></i></div></div><div id="voice">MASCHINENSTIMME // KRIEGSBEFEHL</div><div id="fighters"><span class="nameA">THE BUTCHER // HYDRAULIC HAMMER</span> &nbsp; VS &nbsp; <span class="nameB">THE RIPPER // ROTARY SAW</span><br>F FULLSCREEN &nbsp; H HUD &nbsp; D DEMO</div>
+<body><div id="boot">ASSEMBLING INFERNAL MACHINES</div><button id="audioStart" disabled>START MACHINE WAR</button><div id="hud"><div id="signal">● INITIALIZING</div><div id="title">INFERNAL FOUNDRY</div><div class="minor" id="status">BLENDER ASSETS // THREE.JS COMBAT RUNTIME</div><div class="meter"><i id="intensity"></i></div></div><div id="voice">MASCHINENSTIMME // KRIEGSBEFEHL</div><div id="fighters"><span class="nameA">THE BUTCHER // HYDRAULIC HAMMER</span> &nbsp; VS &nbsp; <span class="nameB">THE RIPPER // ROTARY SAW</span><br>F FULLSCREEN &nbsp; H HUD &nbsp; D DEMO</div>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/GLTFLoader.js';
@@ -36,7 +36,7 @@ async function init(){
   clock=new THREE.Clock();loader=new GLTFLoader();buildArena();buildParticles();
   const results=await Promise.allSettled([loadRobot('./assets/robot-butcher.glb','butcher'),loadRobot('./assets/robot-ripper.glb','ripper')]);
   if(results.some(r=>r.status==='rejected'))console.error('Robot asset load failed',results);
-  connect();$('audioStart').addEventListener('click',initAudio);addEventListener('resize',resize);addEventListener('keydown',keys);
+  connect();$('audioStart').disabled=false;$('audioStart').addEventListener('click',initAudio);addEventListener('resize',resize);addEventListener('keydown',keys);
   $('boot').style.opacity='0';setTimeout(()=>$('boot')?.remove(),550);window.__AV_READY=true;animate();
 }
 function buildArena(){

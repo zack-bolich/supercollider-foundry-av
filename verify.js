@@ -17,6 +17,7 @@ const path = require('path');
   const expectAudio = process.argv.includes('--audio');
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 });
   if (expectAudio) {
+    await page.waitForFunction(() => window.__AV_READY === true && document.querySelector('#audioStart') && !document.querySelector('#audioStart').disabled, { timeout: 30000 });
     await page.click('#audioStart');
     try {
       await page.waitForFunction(() => window.__AUDIO_STATUS && window.__AUDIO_STATUS.running && window.__AUDIO_STATUS.scheduled > 40 && window.__AUDIO_STATUS.voiceLoaded && window.__AUDIO_STATUS.voicePlays > 0, { timeout: 20000 });
