@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FOUNDRY // SIGNAL ORGANISM</title>
+<link rel="icon" href="data:,">
+<script src="/vendor/p5.min.js"></script>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050607;color:#d7e0d8;font-family:Consolas,"Courier New",monospace}
+  canvas{display:block}
+  #boot{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;letter-spacing:.22em;font-size:12px;color:#d6ff45;background:#050607;transition:opacity .6s}
+</style>
+</head>
+<body><div id="boot">INITIALIZING FOUNDRY LINK</div>
+<script>
+p5.disableFriendlyErrors = true;
+const PALETTE={void:'#050607',iron:'#19201d',bone:'#d7e0d8',acid:'#d6ff45',ember:'#ff5a24',cold:'#36d7ff',bruise:'#8c42ff'};
+const state={section:'FOUNDRY',sectionIndex:0,beat:0,connected:false,oscLive:false,lastOsc:0,received:0,demo:false,hud:true,kick:0,snare:0,hat:0,note:0,voice:0,shake:0,flash:0,pitch:48};
+let sparks=[], shards=[], trails, seed=47011, socket, reconnectTimer, demoStep=0, demoLast=0;
+const sectionNames=['FOUNDRY','CRUCIBLE','OVERLOAD','BLACKOUT'];
+
+function setup(){
+  pixelDensity(1); createCanvas(windowWidth,windowHeight); frameRate(60);
+  colorMode(HSB,360,100,100,100); randomSeed(seed); noiseSeed(seed);
+  trails=createGraphics(width,height); trails.pixelDensity(1); trails.colorMode(HSB,360,100,100,100); trails.clear();
+  for(let i=0;i<80;i++) sparks.push(new Spark(random(width),random(height),random(-.3,.3),random(-.2,.2),random(20,180),false));
+  connect(); document.getElementById('boot').style.opacity='0'; setTimeout(()=>document.getElementById('boot').remove(),700);
+  window.__AV_READY=true;
+}
+
+function connect(){
+  clearTimeout(reconnectTimer);
+  socket=new WebSocket(`ws://${location.host}`);
+  socket.onopen=()=>{state.connected=true};
+  socket.onclose=()=>{state.connected=false;state.oscLive=false;reconnectTimer=setTimeout(connect,1000)};
+  socket.onerror=()=>socket.close();
+  socket.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='osc')handleOSC(m);if(m.type==='relay'&&m.status==='connected')state.received=m.received||0}catch(_){}};
+}
+
+function handleOSC(m){
+  state.oscLive=true;state.lastOsc=performance.now();state.received=m.received||state.received+1;
+  const a=m.args||[];
+  if(m.address==='/av/section') setSection(String(a[0]||'FOUNDRY'),Number(a[1]||0));
+  if(m.address==='/av/beat'){state.beat=Number(a[0]||0);state.flash=Math.max(state.flash,.15+Number(a[1]||0)*.18)}
+  if(m.address==='/av/hit') hit(String(a[0]||'hat'),Number(a[1]||.5));
+  if(m.address==='/av/note'){state.pitch=Number(a[0]||48);state.note=Math.max(state.note,Number(a[1]||.5));spawnNote(state.pitch,state.note)}
+  if(m.address==='/av/stop'){state.oscLive=false;state.section='HALTED'}
+}
+function setSection(name,index){state.section=String(name).toUpperCase();state.sectionIndex=Number(index)||0;state.flash=.7;for(let i=0;i<34;i++)spawnShard(width/2,height/2,random(TWO_PI),random(3,13))}
+function hit(kind,v){v=Math.max(0,Math.min(1.5,v));if(kind==='kick'){state.kick=Math.max(state.kick,v);state.shake+=9*v;for(let i=0;i<18*v;i++)spawnSpark(width/2,height*.72,true)}else if(kind==='snare'){state.snare=Math.max(state.snare,v);state.flash=Math.max(state.flash,.5*v);for(let i=0;i<22*v;i++)spawnShard(width*.5,height*.46,random(TWO_PI),random(4,15))}else if(kind==='voice'){state.voice=1;state.flash=.35}else{state.hat=Math.max(state.hat,v);for(let i=0;i<5*v;i++)spawnSpark(random(width),height*.18,true)}}
+function spawnNote(note,v){const y=map(note,30,90,height*.82,height*.14,true);for(let i=0;i<10+v*15;i++)sparks.push(new Spark(width*.5+random(-width*.12,width*.12),y,random(-3,3),random(-2,2),random(45,110),true))}
+function spawnSpark(x,y,burst=false){sparks.push(new Spark(x,y,burst?random(-5,5):random(-.3,.3),burst?random(-7,-1):random(-.2,.2),random(35,130),burst))}
+function spawnShard(x,y,a,s){shards.push({x,y,vx:cos(a)*s,vy:sin(a)*s,life:1,spin:random(-.25,.25),r:random(3,16)})}
+
+function draw(){
+  if(performance.now()-state.lastOsc>1800)state.oscLive=false;
+  if(state.demo)runDemo();
+  decayState();
+  const sx=random(-state.shake,state.shake),sy=random(-state.shake,state.shake);
+  push();translate(sx,sy);renderBackdrop();renderArchitecture();renderTrails();renderCore();renderParticles();renderGlitches();pop();
+  if(state.hud)renderHUD();
+  window.__AV_FRAME=frameCount;window.__AV_STATUS={...state,sparks:sparks.length,shards:shards.length};
+}
+function decayState(){state.kick*=.84;state.snare*=.79;state.hat*=.68;state.note*=.92;state.voice*=.965;state.shake*=.72;state.flash*=.78}
+
+function renderBackdrop(){
+  noStroke();
+  for(let y=0;y<height;y+=8){const t=y/height;fill(160+15*t,18,4+7*t);rect(-20,y,width+40,9)}
+  blendMode(ADD);for(let i=0;i<7;i++){const y=height*(.12+i*.13)+sin(frameCount*.006+i)*18;fill(i%2?82:20,85,8,10);rect(0,y,width,1+state.hat*2)}blendMode(BLEND);
+  stroke(80,18,24,20);strokeWeight(1);for(let x=0;x<width;x+=32)line(x,0,x,height);for(let y=0;y<height;y+=32)line(0,y,width,y);
+}
+function renderArchitecture(){
+  const cx=width/2,hz=height*.58;stroke(75,28,55,52);strokeWeight(1.2);noFill();
+  for(let i=0;i<18;i++){const t=i/17,yy=lerp(hz,height*1.08,t*t);line(cx-width*(.08+t*.68),yy,cx+width*(.08+t*.68),yy)}
+  for(let i=-8;i<=8;i++){const bx=cx+i*width*.075;line(cx+i*11,hz,bx,height)}
+  noStroke();fill(20,70,24,45+state.kick*35);quad(0,height*.75,width*.31,hz,width*.39,hz,0,height);fill(190,60,22,35+state.snare*40);quad(width,height*.75,width*.69,hz,width*.61,hz,width,height);
+  stroke(15,82,83,45);strokeWeight(2);for(let i=0;i<6;i++){const x=width*(.08+i*.17);line(x,height*.12,x,height*.32+sin(frameCount*.01+i)*28);line(x-13,height*.32,x+13,height*.32)}
+}
+function renderTrails(){
+  trails.noStroke();trails.fill(160,30,2.2,12);trails.rect(0,0,width,height);
+  trails.blendMode(ADD);trails.strokeWeight(1);
+  for(let p of sparks){if(p.life>.2){trails.stroke(p.hue,85,85,p.life*18);trails.line(p.x,p.y,p.x-p.vx*3,p.y-p.vy*3)}}
+  trails.blendMode(BLEND);image(trails,0,0);
+}
+function renderCore(){
+  const cx=width/2,cy=height*.46,base=Math.min(width,height)*(.13+state.kick*.018);
+  push();translate(cx,cy);rotate(frameCount*.002*(state.section==='OVERLOAD'?4:1));
+  blendMode(ADD);noFill();
+  for(let r=0;r<7;r++){const rr=base*(1+r*.22)+sin(frameCount*.025+r)*5;stroke((82+r*9+state.sectionIndex*31)%360,80,70,20+r*3+state.note*14);strokeWeight(r%2?1:3);arc(0,0,rr*2,rr*2,r*.72+state.snare,r*.72+PI+state.kick)}
+  blendMode(BLEND);noStroke();fill(0,0,2,92);circle(0,0,base*1.28);fill(82,80,80,8+state.kick*25);circle(0,0,base*(.75+state.kick*.2));
+  stroke(82,88,95,68);strokeWeight(2);for(let i=0;i<12;i++){const a=TWO_PI*i/12+frameCount*.006;const r1=base*.46,r2=base*(.72+state.note*.2);line(cos(a)*r1,sin(a)*r1,cos(a)*r2,sin(a)*r2)}
+  if(state.voice>.02){noFill();stroke(190,85,95,state.voice*70);strokeWeight(2);for(let i=0;i<5;i++){const rr=base*(1.5+i*.18+sin(frameCount*.15+i)*.05);arc(0,0,rr*2,rr*2,-1.1,1.1)}}
+  pop();
+}
+function renderParticles(){
+  blendMode(ADD);noStroke();
+  for(let i=sparks.length-1;i>=0;i--){const p=sparks[i];p.update();p.draw();if(p.life<=0)sparks.splice(i,1)}
+  blendMode(BLEND);fill(15,90,90);noStroke();
+  for(let i=shards.length-1;i>=0;i--){const q=shards[i];q.x+=q.vx;q.y+=q.vy;q.vx*=.98;q.vy=q.vy*.98+.08;q.life-=.018;push();translate(q.x,q.y);rotate(frameCount*q.spin);fill(15+state.sectionIndex*35,90,95,q.life*80);rect(-q.r/2,-1,q.r,2);pop();if(q.life<=0)shards.splice(i,1)}
+  if(sparks.length>900)sparks.splice(0,sparks.length-900);
+}
+function renderGlitches(){
+  if(state.snare>.12||state.section==='OVERLOAD'){noStroke();const n=2+floor(state.snare*10);for(let i=0;i<n;i++){const y=random(height),h=random(1,8),off=random(-40,40)*state.snare;fill(random()<.5?82:190,90,90,8+state.snare*18);rect(off,y,width,h)}}
+  noStroke();fill(0,0,100,state.flash*7);rect(0,0,width,height);
+  stroke(0,0,100,4);for(let y=0;y<height;y+=4)line(0,y,width,y);
+}
+function renderHUD(){
+  const live=state.connected&&state.oscLive;noStroke();fill(0,0,2,72);rect(18,18,292,102);stroke(live?82:15,88,90,70);noFill();rect(18.5,18.5,292,102);noStroke();
+  fill(live?82:15,85,95);textSize(11);textStyle(BOLD);text(`● ${live?'OSC LIVE':'OSC WAITING'}  //  ${state.demo?'DEMO':'REAL SIGNAL'}`,32,43);
+  fill(0,0,88);textSize(22);text(state.section,31,72);textStyle(NORMAL);fill(160,15,65);textSize(10);text(`PORT 57220   EVENTS ${nf(state.received,6)}   BEAT ${nf(state.beat,2)}`,32,97);
+  textAlign(RIGHT);fill(0,0,70);text('FOUNDRY SIGNAL ORGANISM  /  F FULLSCREEN  H HUD  D DEMO',width-24,height-22);textAlign(LEFT);
+  if(state.voice>.03){fill(190,70,95,state.voice*75);textAlign(CENTER);textSize(12);text('MASCHINENSTIMME // KANAL OFFEN',width/2,height*.82);textAlign(LEFT)}
+}
+function runDemo(){if(millis()-demoLast>91){demoLast=millis();demoStep++;if(demoStep%2===0)hit('kick',.75);if(demoStep%8===4)hit('snare',.8);hit('hat',random(.08,.35));if(demoStep%3===0){state.note=.5;spawnNote(40+(demoStep%18),.5)}if(demoStep%64===0)setSection(sectionNames[(demoStep/64)%4|0],demoStep/64|0)}}
+
+class Spark{
+  constructor(x,y,vx,vy,life,burst){this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.max=life;this.life=life/120;this.hue=random()<.72?random(65,92):random(10,25);this.size=burst?random(1,3.8):random(.5,1.8)}
+  update(){const a=noise(this.x*.003,this.y*.003,frameCount*.004)*TWO_PI*2;this.vx+=cos(a)*.018;this.vy+=sin(a)*.018;this.x+=this.vx;this.y+=this.vy;this.vx*=.992;this.vy*=.992;this.life-=.006;if(this.x<0)this.x=width;if(this.x>width)this.x=0;if(this.y<0)this.y=height;if(this.y>height)this.y=0}
+  draw(){fill(this.hue,88,96,Math.max(0,this.life)*85);circle(this.x,this.y,this.size*(1+state.hat*1.7))}
+}
+function keyPressed(){if(key==='f'||key==='F')fullscreen(!fullscreen());if(key==='s'||key==='S')saveCanvas('foundry-signal-organism','png');if(key==='d'||key==='D')state.demo=!state.demo;if(key==='h'||key==='H')state.hud=!state.hud}
+function mousePressed(){for(let i=0;i<34;i++)spawnShard(mouseX,mouseY,random(TWO_PI),random(2,12));state.snare=.8}
+function windowResized(){resizeCanvas(windowWidth,windowHeight);trails=createGraphics(width,height);trails.pixelDensity(1);trails.colorMode(HSB,360,100,100,100);trails.clear()}
+</script></body></html>

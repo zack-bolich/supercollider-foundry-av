@@ -1,0 +1,5 @@
+node_modules/
+*.log
+/foundry-live-preview.png
+.env
+.DS_Store

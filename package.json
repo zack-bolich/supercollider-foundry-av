@@ -1,0 +1,17 @@
+{
+  "name": "supercollider-foundry-av",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SuperCollider OSC to WebSocket relay with original p5.js foundry visuals",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "p5": "^1.11.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.6.0"
+  }
+}
