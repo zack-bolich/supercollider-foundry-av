@@ -1,4 +1,5 @@
 node_modules/
+.hermes/
 *.log
 /foundry-live-preview.png
 .env
