@@ -17,6 +17,7 @@ const path = require('path');
   const expectAudio = process.argv.includes('--audio');
   const expectHammer = process.argv.includes('--hammer');
   const expectSaw = process.argv.includes('--saw');
+  const expectClash = process.argv.includes('--clash');
   let contactBaseline = { hammerContacts: 0, sawContacts: 0 };
   await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 30000 });
   if (expectAudio) {
@@ -39,14 +40,18 @@ const path = require('path');
     await page.waitForFunction(() => window.__AV_STATUS && window.__AV_STATUS.demo === true, { timeout: 10000 });
   }
   const status = await page.evaluate(() => ({ frame: window.__AV_FRAME, status: window.__AV_STATUS, audio: window.__AUDIO_STATUS || null, canvas: { width: document.querySelector('canvas').width, height: document.querySelector('canvas').height } }));
-  if (expectHammer || expectSaw) contactBaseline = await page.evaluate(() => ({ hammerContacts: window.__AV_STATUS?.hammerContacts || 0, sawContacts: window.__AV_STATUS?.sawContacts || 0 }));
-  if (expectHammer) await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.hammerContacts > base, { timeout: 8000 }, contactBaseline.hammerContacts);
+  if (expectHammer || expectSaw || expectClash) contactBaseline = await page.evaluate(() => ({ hammerContacts: window.__AV_STATUS?.hammerContacts || 0, sawContacts: window.__AV_STATUS?.sawContacts || 0 }));
+  if (expectClash) {
+    await page.evaluate(() => window.__AV_FORCE_ATTACK('both'));
+    await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.hammerContacts > base.hammerContacts && window.__AV_STATUS.sawContacts > base.sawContacts, { timeout: 8000 }, contactBaseline);
+  } else if (expectHammer) await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.hammerContacts > base, { timeout: 8000 }, contactBaseline.hammerContacts);
   else if (expectSaw) await page.waitForFunction(base => window.__AV_STATUS && window.__AV_STATUS.sawContacts > base, { timeout: 8000 }, contactBaseline.sawContacts);
   else if (expectAudio) await page.waitForFunction(() => window.__AV_STATUS && (window.__AV_STATUS.butcherAttack > 0.95 || window.__AV_STATUS.ripperAttack > 0.95), { timeout: 5000 });
   const impactStatus = await page.evaluate(() => window.__AV_STATUS);
   if (expectHammer && (impactStatus.hammerDistance > 0.75 || impactStatus.ripperDamage < 0.8)) errors.push(`HAMMER CONTACT distance=${impactStatus.hammerDistance} recoil=${impactStatus.ripperDamage}`);
   if (expectSaw && (impactStatus.sawDistance > 0.75 || impactStatus.butcherDamage < 0.8)) errors.push(`SAW CONTACT distance=${impactStatus.sawDistance} recoil=${impactStatus.butcherDamage}`);
-  const screenshot = path.join(__dirname, expectHammer ? 'battle-hammer-impact.png' : expectSaw ? 'battle-saw-impact.png' : 'foundry-live-preview.png');
+  if (expectClash && (impactStatus.hammerDistance > 0.75 || impactStatus.sawDistance > 0.75 || impactStatus.ripperDamage < 0.8 || impactStatus.butcherDamage < 0.8)) errors.push(`CLASH CONTACT hammer=${impactStatus.hammerDistance} saw=${impactStatus.sawDistance} leftRecoil=${impactStatus.butcherDamage} rightRecoil=${impactStatus.ripperDamage}`);
+  const screenshot = path.join(__dirname, expectClash ? 'battle-clash-impact.png' : expectHammer ? 'battle-hammer-impact.png' : expectSaw ? 'battle-saw-impact.png' : 'foundry-live-preview.png');
   await page.screenshot({ path: screenshot });
   console.log(JSON.stringify({ ok: errors.length === 0, errors, screenshot, impactStatus, ...status }, null, 2));
   await browser.close();
