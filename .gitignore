@@ -1,5 +1,7 @@
 node_modules/
 .hermes/
+__pycache__/
+*.pyc
 *.log
 /foundry-live-preview.png
 .env

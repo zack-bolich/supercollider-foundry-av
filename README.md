@@ -60,3 +60,14 @@ The arrangement includes an original German machine-voice passage:
 - `H`: toggle HUD
 
 The relay accepts only `/av/section`, `/av/beat`, `/av/hit`, `/av/note`, and `/av/stop`, and binds to localhost only.
+
+## Ableton Live 11 Intro export
+
+`ableton/export_live11_intro.py` renders a stock-compatible, device-neutral port of the composition: five editable MIDI tracks, seven synchronized 48 kHz/24-bit WAV stems, a pre-rendered vocoded voice, section markers, and a reference mix. The 12-track MIDI-plus-stems layout stays within Live 11 Intro's 16-track limit.
+
+```bash
+python ableton/export_live11_intro.py
+python -m unittest ableton/test_export_live11_intro.py -v
+```
+
+The default export location is `C:\\Users\\learn\\Downloads\\Infernal-Foundry-Ableton-Live-11-Intro`. Its README contains the exact drag-and-drop procedure for Live 11 Intro.
